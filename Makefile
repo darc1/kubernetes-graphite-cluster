@@ -1,6 +1,6 @@
 DOCKER_REPOSITORY?=nanit
 SUDO?=sudo
-
+CLUSTER?=""
 STATSD_PROXY_APP_NAME=statsd
 STATSD_PROXY_DIR_NAME=statsd-proxy
 STATSD_PROXY_DOCKER_DIR=docker/$(STATSD_PROXY_DIR_NAME)
@@ -19,14 +19,14 @@ define generate-statsd-proxy-dep
 endef
 
 deploy-statsd-proxy: docker-statsd-proxy
-	kubectl get svc $(STATSD_PROXY_APP_NAME) || $(call generate-statsd-proxy-svc) | kubectl create -f -
-	$(call generate-statsd-proxy-dep) | kubectl apply -f -
+	kubectl get svc $(STATSD_PROXY_APP_NAME) $(CLUSTER) || $(call generate-statsd-proxy-svc) | kubectl create -f - $(CLUSTER) 
+	$(call generate-statsd-proxy-dep) | kubectl apply -f - $(CLUSTER)
 
 docker-statsd-proxy:
 	$(SUDO) docker pull $(STATSD_PROXY_IMAGE_NAME) || ($(SUDO) docker build -t $(STATSD_PROXY_IMAGE_NAME) $(STATSD_PROXY_DOCKER_DIR) && $(SUDO) docker push $(STATSD_PROXY_IMAGE_NAME))
 
 clean-statsd-proxy:
-	kubectl delete deployment $(STATSD_PROXY_APP_NAME) || true
+	kubectl delete deployment $(STATSD_PROXY_APP_NAME) $(CLUSTER) || true
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------
 STATSD_DAEMON_APP_NAME=statsd-daemon
@@ -47,14 +47,14 @@ define generate-statsd-daemon-dep
 endef
 
 deploy-statsd-daemon: docker-statsd-daemon
-	kubectl get svc $(STATSD_DAEMON_APP_NAME) || $(call generate-statsd-daemon-svc) | kubectl create -f -
-	$(call generate-statsd-daemon-dep) | kubectl apply -f -
+	kubectl get svc $(STATSD_DAEMON_APP_NAME) $(CLUSTER) || $(call generate-statsd-daemon-svc) | kubectl create -f - $(CLUSTER)
+	$(call generate-statsd-daemon-dep) | kubectl apply -f - $(CLUSTER)
 
 docker-statsd-daemon:
 	$(SUDO) docker pull $(STATSD_DAEMON_IMAGE_NAME) || ($(SUDO) docker build -t $(STATSD_DAEMON_IMAGE_NAME) $(STATSD_DAEMON_DOCKER_DIR) && $(SUDO) docker push $(STATSD_DAEMON_IMAGE_NAME))
 
 clean-statsd-daemon:
-	kubectl delete deployment $(STATSD_DAEMON_APP_NAME) || true
+	kubectl delete deployment $(STATSD_DAEMON_APP_NAME) $(CLUSTER) || true
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------
 CARBON_RELAY_APP_NAME=carbon-relay
@@ -75,15 +75,15 @@ define generate-carbon-relay-dep
 endef
 
 deploy-carbon-relay: docker-carbon-relay
-	kubectl get svc $(CARBON_RELAY_APP_NAME) || $(call generate-carbon-relay-svc) | kubectl create -f -
-	$(call generate-carbon-relay-dep) | kubectl apply -f -
+	kubectl get svc $(CARBON_RELAY_APP_NAME) $(CLUSTER) || $(call generate-carbon-relay-svc) | kubectl create -f - $(CLUSTER)
+	$(call generate-carbon-relay-dep) | kubectl apply -f - $(CLUSTER)
 
 docker-carbon-relay:
 	$(SUDO) docker pull $(CARBON_RELAY_IMAGE_NAME) || ($(SUDO) docker build -t $(CARBON_RELAY_IMAGE_NAME) $(CARBON_RELAY_DOCKER_DIR) && $(SUDO) docker push $(CARBON_RELAY_IMAGE_NAME))
 
 clean-carbon-relay:
-	kubectl delete deployment $(CARBON_RELAY_APP_NAME) || true
-	kubectl delete svc $(CARBON_RELAY_APP_NAME) || true
+	kubectl delete deployment $(CARBON_RELAY_APP_NAME) $(CLUSTER) || true
+	kubectl delete svc $(CARBON_RELAY_APP_NAME) $(CLUSTER) || true
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------
 GRAPHITE_NODE_APP_NAME=graphite-node
@@ -109,15 +109,15 @@ define generate-graphite-node-dep
 endef
 
 deploy-graphite-node: docker-graphite-node
-	kubectl get svc $(GRAPHITE_NODE_APP_NAME) || $(call generate-graphite-node-svc) | kubectl create -f -
-	$(call generate-graphite-node-dep) | kubectl apply -f -
+	kubectl get svc $(GRAPHITE_NODE_APP_NAME) $(CLUSTER) || $(call generate-graphite-node-svc) | kubectl create -f - $(CLUSTER)
+	$(call generate-graphite-node-dep) | kubectl apply -f - $(CLUSTER)
 
 docker-graphite-node:
 	$(SUDO) docker pull $(GRAPHITE_NODE_IMAGE_NAME) || ($(SUDO) docker build -t $(GRAPHITE_NODE_IMAGE_NAME) $(GRAPHITE_NODE_DOCKER_DIR) && $(SUDO) docker push $(GRAPHITE_NODE_IMAGE_NAME))
 
 clean-graphite-node:
-	kubectl delete statefulset $(GRAPHITE_NODE_APP_NAME) || true
-	kubectl delete pvc -l app=$(GRAPHITE_NODE_APP_NAME) || true
+	kubectl delete statefulset $(GRAPHITE_NODE_APP_NAME) $(CLUSTER) || true
+	kubectl delete pvc -l app=$(GRAPHITE_NODE_APP_NAME) $(CLUSTER) || true
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------
 GRAPHITE_MASTER_APP_NAME=graphite
@@ -137,14 +137,14 @@ define generate-graphite-master-dep
 endef
 
 deploy-graphite-master: docker-graphite-master
-	kubectl get svc $(GRAPHITE_MASTER_APP_NAME) || $(call generate-graphite-master-svc) | kubectl create -f -
-	$(call generate-graphite-master-dep) | kubectl apply -f -
+	kubectl get svc $(GRAPHITE_MASTER_APP_NAME) $(CLUSTER) || $(call generate-graphite-master-svc) | kubectl create -f - $(CLUSTER)
+	$(call generate-graphite-master-dep) | kubectl apply -f - $(CLUSTER)
 
 docker-graphite-master:
 	$(SUDO) docker pull $(GRAPHITE_MASTER_IMAGE_NAME) || ($(SUDO) docker build -t $(GRAPHITE_MASTER_IMAGE_NAME) $(GRAPHITE_MASTER_DOCKER_DIR) && $(SUDO) docker push $(GRAPHITE_MASTER_IMAGE_NAME))
 
 clean-graphite-master:
-	kubectl delete deployment $(GRAPHITE_MASTER_APP_NAME) || true
+	kubectl delete deployment $(GRAPHITE_MASTER_APP_NAME) $(CLUSTER) || true
 
 
 deploy: deploy-graphite-node deploy-statsd-daemon deploy-statsd-proxy deploy-carbon-relay deploy-graphite-master
@@ -152,10 +152,10 @@ deploy: deploy-graphite-node deploy-statsd-daemon deploy-statsd-proxy deploy-car
 clean: clean-statsd-proxy clean-statsd-daemon clean-carbon-relay clean-graphite-node clean-graphite-master
 
 verify-statsd:
-	kubectl exec $(name) -- cat proxyConfig.js | grep host
+	kubectl exec $(name) $(CLUSTER )-- cat proxyConfig.js | grep host
 
 verify-carbon:
-	kubectl exec $(name) -- cat /opt/graphite/conf/carbon.conf | grep DESTINATIONS
+	kubectl exec $(name) $(CLUSTER) -- cat /opt/graphite/conf/carbon.conf | grep DESTINATIONS
 
 verify-graphite:
-	kubectl exec $(name) -- cat /opt/graphite/webapp/graphite/local_settings.py | grep CLUSTER_SERVERS
+	kubectl exec $(name) $(CLUSTER) -- cat /opt/graphite/webapp/graphite/local_settings.py | grep CLUSTER_SERVERS

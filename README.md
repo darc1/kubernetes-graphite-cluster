@@ -29,6 +29,7 @@ Find the full details [here](https://medium.com/@erezrabih/creating-a-graphite-c
 | GRAPHITE_NODE_CURATOR_RETENTION | None          | Set this variable to run a cronjob which deletes metrics that haven't been written for X days. Leaving it blank will not run the curator
 | GRAPHITE_NODE_STORAGE_CLASS     | None          | The storage class for the persistent volumen claims of the Graphite node stateful set
 | GRAPHITE_MASTER_REPLICAS        | None          | Number of replicas for graphite query node                                                                                           
+| CLUSTER                         | ""            | k8s cluster to use format --cluster=<CLUSTER-NAME>                                                                                         
 
 ## Deployment:
 1. Clone this repository
